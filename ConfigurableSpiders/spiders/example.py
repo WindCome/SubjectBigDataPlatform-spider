@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import re
+
 import scrapy
 from lxml import etree
 
@@ -27,38 +29,51 @@ class ExampleSpider(scrapy.Spider, OutputConfig):
         steps = self.config_pool.get_steps(current_url)
         if steps is None:
             print("获取" + current_url + "的解析步骤时发生错误")
-            yield
+        else:
+            # 找出子页面的链接
+            if steps.has_child_page():
+                xpath_str = 'xpath'
+                regex_str = 'regex'
+                doc = etree.HTML(response.body.decode(response.encoding))
+                search_child_page_conditions = steps.search_conditions
+                for condition in search_child_page_conditions:
+                    if xpath_str in condition.keys():
+                        a_tags = doc.xpath(condition[xpath_str])
+                        if len(a_tags) == 0:
+                            print("xpath:" + condition[xpath_str] + "在" + response.url + "中无匹配节点")
+                        for a_tag in a_tags:
+                            target_url = LxmlHelper.get_attribute_of_element(a_tag, 'href')
+                            target_url = response.urljoin(target_url)
+                            if regex_str in condition.keys() and ExampleSpider.is_node_match_regex(a_tag, condition[regex_str]) or\
+                                    regex_str not in condition.keys():
+                                self.config_pool.accpet_xpath_crawl_result(current_url, condition, target_url)
+                                yield scrapy.Request(target_url)
 
-        # 找出进一步爬取的链接
-        if 'xpath' in steps.keys():
-            doc = etree.HTML(response.body)
-            xpath_strs = steps['xpath']
-            for xpath_str in xpath_strs:
-                a_tags = doc.xpath(xpath_str)
-                if len(a_tags) == 0:
-                    print("xpath:" + xpath_str + "在" + response.url + "中无匹配节点")
-                for a_tag in a_tags:
-                    target_url = LxmlHelper.get_attribute_of_element(a_tag, 'href')
-                    target_url = response.urljoin(target_url)
-                    self.config_pool.accpet_xpath_crawl_result(current_url, xpath_str, target_url)
-                    yield scrapy.Request(target_url)
+            # 解析当前页面
+            if steps.is_data_page():
+                structuring_data = StructuringParser.parse(response)
+                data_mapper = steps.data_mapper
+                mapper_name = data_mapper.set_structuring_data(structuring_data)
+                print(current_url + "使用的数据映射器类型为" + mapper_name)
+                for record in data_mapper:
+                    item = ConfigurablespidersItem()
+                    item['url'] = current_url
+                    item['data_item'] = record
+                    yield item
 
-        # 解析当前页面
-        if 'mapping' in steps.keys():
-            structuring_data = StructuringParser.parse(response)
-            data_mapper = self.config_pool.get_data_mapper(current_url)
-            mapper_name = data_mapper.set_structuring_data(structuring_data)
-            print(current_url + "使用的数据映射器类型为" + mapper_name)
-            for record in data_mapper:
-                item = ConfigurablespidersItem()
-                item['url'] = current_url
-                item['data_item'] = record
-                yield item
+    @staticmethod
+    def is_node_match_regex(node, regex_str):
+        text = LxmlHelper.get_text_of_node(node)
+        search = re.search(regex_str, text)
+        if search is not None:
+            return True
+        return False
 
     def get_output_config(self, pipeline_mark, item_from_url):
-        output_config = self.config_pool.get_output_config(item_from_url)
-        if output_config is not None and pipeline_mark in output_config.keys():
-            return output_config[pipeline_mark]
+        steps = self.config_pool.get_steps(item_from_url)
+        if steps is None:
+            return None
+        return steps.get_output_config(pipeline_mark,item_from_url)
 
     def close(self, reason):
         FileHelper.clear_tmp_file()

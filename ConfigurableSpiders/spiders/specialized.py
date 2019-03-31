@@ -54,7 +54,7 @@ class GG_JX_GJJGHJC(scrapy.Spider, OutputConfig):
             yield record
 
     def get_output_config(self, pipeline_mark, item_from_url):
-        output_setting = {'redis': 'upgrade1'}  # 'csv': 'upgrade1',
+        output_setting = {'csv': 'upgrade1'}  # ,'redis': 'upgrade1'
         if pipeline_mark in output_setting.keys():
             return output_setting[pipeline_mark]
 

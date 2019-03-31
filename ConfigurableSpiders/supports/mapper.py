@@ -99,7 +99,7 @@ class DataMapper:
 
     def __init_mapper(self, structuring_data):
         if self.mapper is not None:
-            return
+            return type(self.mapper).__name__
         subclass_abstract_data_mapper = ClassHelper.get_all_classes(AbstractDataMapper)
         for class_name in subclass_abstract_data_mapper:
             data_mapper = subclass_abstract_data_mapper[class_name](self.attribute_setting)
