@@ -3,6 +3,7 @@ from lxml import etree
 
 import scrapy
 
+from ConfigurableSpiders.items import ConfigurablespidersItem
 from ConfigurableSpiders.supports.analyze import StructuringParser
 from ConfigurableSpiders.supports.configure import OutputConfig
 from ConfigurableSpiders.supports.mapper import DataMapper
@@ -51,10 +52,13 @@ class GG_JX_GJJGHJC(scrapy.Spider, OutputConfig):
         mapper_name = data_mapper.set_structuring_data(structuring_data)
         print(response.request.url + "使用的数据映射器类型为" + mapper_name)
         for record in data_mapper:
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
-        output_setting = {'csv': 'upgrade1'}  # ,'redis': 'upgrade1'
+        output_setting = {'redis': 'upgrade1'}  # 'csv': 'upgrade1',
         if pipeline_mark in output_setting.keys():
             return output_setting[pipeline_mark]
 
@@ -98,7 +102,10 @@ class GG_PT_GJKJJD(scrapy.Spider, OutputConfig):
         current_url = response.request.url
         for record in data_mapper:
             record['JDLB'] = '国家国际科技合作基地-'+self.type_mapping[current_url]
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade6'}  #'csv': 'upgrade6',
@@ -161,7 +168,10 @@ class GG_JX_JPSPGKK(scrapy.Spider, OutputConfig):
             if search is not None:
                 self.pc_mapping[response.request.url] = search.group()
             for record in self.parse(response):
-                yield record
+                item = ConfigurablespidersItem()
+                item['url'] = response.request.url
+                item['data_item'] = record
+                yield item
 
     def parse(self, response):
         mapping_setting = {'学校': 'XXMC',
@@ -179,7 +189,10 @@ class GG_JX_JPSPGKK(scrapy.Spider, OutputConfig):
             if js is not None and StringHelper.filter_illegal_char(js) != 0:
                 record['KCMC'] = record['KCMC'] + '（1～' + js + '讲）'
             record['PC'] = self.pc_mapping[current_url]
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade10'}  #'csv': 'upgrade10',
@@ -216,8 +229,10 @@ class GG_JX_JPZYGXK(scrapy.Spider, OutputConfig):
         print(response.request.url + "使用的数据映射器类型为" + mapper_name)
         for record in data_mapper:
             record['PC'] = self.url_pc[response.request.url]
-            print(record)
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         if pipeline_mark == 'csv':
@@ -250,7 +265,10 @@ class GG_JX_LHLXYYPPK(scrapy.Spider, OutputConfig):
         current_url = response.request.url
         for record in data_mapper:
             record['PDSJ'] = self.pdsj_mapping[current_url]
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade12'}  #'csv': 'upgrade12',
@@ -311,7 +329,10 @@ class GG_HJ_LXLYKJJ(scrapy.Spider, OutputConfig):
         current_url = response.request.url
         for record in data_mapper:
             record['PDSJ'] = self.year_mapping[current_url]
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade15'}  #'csv': 'upgrade15',
@@ -368,7 +389,10 @@ class GG_TD_GJJTD(scrapy.Spider, OutputConfig):
         current_url = response.request.url
         for record in data_mapper:
             record['PDSJ'] = self.year_mapping[current_url]
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade19'}  #'csv': 'upgrade19',
@@ -433,7 +457,10 @@ class GG_ZJ_JYBRC(scrapy.Spider, OutputConfig):
         for record in data_mapper:
             record['PDSJ'] = self.year_mapping[current_url]
             record['LB'] = '新世纪优秀人才支持计划-教育部新世纪优秀人才'
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade20'}  #'csv': 'upgrade20',
@@ -466,7 +493,10 @@ class GG_ZJ_JYBQNJS(scrapy.Spider, OutputConfig):
         structuring_data = StructuringParser.parse(response)
         data_mapper.set_structuring_data(structuring_data)
         for record in data_mapper:
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
         doc = etree.HTML(response.body)
         a_tags = doc.xpath('//*[@id="pagenav"]//a')
@@ -515,7 +545,10 @@ class GG_ZJ_GYDS(scrapy.Spider, OutputConfig):
                     record['XM'] = name_search.group(2)
                 if school_search is not None:
                     record['XXMC'] = school_search.group(2)
-                yield record
+                item = ConfigurablespidersItem()
+                item['url'] = response.request.url
+                item['data_item'] = record
+                yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'csv': 'upgrade25'}  #,'redis': 'upgrade26'
@@ -550,9 +583,13 @@ class GG_ZJ_GCYYS(scrapy.Spider, OutputConfig):
                 a_tags = child.xpath(".//a")
                 for a_tag in a_tags:
                     text = LxmlHelper.get_text_of_node(a_tag)
-                    yield {"YSLB": "中国工程院院士",
+                    record = {"YSLB": "中国工程院院士",
                               "XB": current_type,
                               "XM": text}
+                    item = ConfigurablespidersItem()
+                    item['url'] = response.request.url
+                    item['data_item'] = record
+                    yield item
 
 
     def get_output_config(self, pipeline_mark, item_from_url):
@@ -613,7 +650,10 @@ class GG_JX_GJJGHJCW(scrapy.Spider, OutputConfig):
         structuring_data = StructuringParser.parse(response)
         data_mapper.set_structuring_data(structuring_data)
         for record in data_mapper:
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade29'}  #'csv': 'upgrade29',
@@ -674,7 +714,10 @@ class GG_HJ_HXJSKJJ(scrapy.Spider, OutputConfig):
         current_url = response.request.url
         for record in data_mapper:
             record['PDSJ'] = self.year_mapping[current_url]
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade30'}  #'csv': 'upgrade30',
@@ -704,8 +747,14 @@ class GG_ZJ_GJJJXMS(scrapy.Spider, OutputConfig):
             row_data = structuring_data[i]
             year = re.search('\d{4}', row_data[0][1]).group()
             pc = row_data[0][0]
-            yield {'XM': row_data[1], 'LB': type, 'PC': pc, 'PDSJ': year, 'XXMC': row_data[2]}
-            yield {'XM': row_data[3], 'LB': type, 'PC': pc, 'PDSJ': year, 'XXMC': row_data[4]}
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = {'XM': row_data[1], 'LB': type, 'PC': pc, 'PDSJ': year, 'XXMC': row_data[2]}
+            yield item
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = {'XM': row_data[3], 'LB': type, 'PC': pc, 'PDSJ': year, 'XXMC': row_data[4]}
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade33'}  #'csv': 'upgrade33',
@@ -762,7 +811,10 @@ class GG_TD_JYBTD(scrapy.Spider, OutputConfig):
         current_url = response.request.url
         for record in data_mapper:
             record['PDSJ'] = self.year_mapping[current_url]
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade34'}  #'csv': 'upgrade34',
@@ -820,7 +872,10 @@ class GG_HJ_GJJSFMJ(scrapy.Spider, OutputConfig):
             search = re.search('.等奖', description)
             if search is not None:
                 record['HJDJ'] = search.group()
-                yield record
+                item = ConfigurablespidersItem()
+                item['url'] = response.request.url
+                item['data_item'] = record
+                yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'csv': 'upgrade35'}  #,'redis': 'upgrade35'
@@ -887,7 +942,10 @@ class GG_HJ_GJKJJBJ(scrapy.Spider, OutputConfig):
             search = re.search('.等奖', description)
             if search is not None:
                 record['HJDJ'] = search.group()
-                yield record
+                item = ConfigurablespidersItem()
+                item['url'] = response.request.url
+                item['data_item'] = record
+                yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'csv': 'upgrade36'}  #,'redis': 'upgrade36'
@@ -953,7 +1011,10 @@ class GG_HJ_ZGZLJ(scrapy.Spider, OutputConfig):
             record['PDSJ'] = self.year_mapping[current_url]
             record['HJDJ'] = self.type_mapping[current_url]
             record['PC'] = self.pc_mapping[current_url]
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade37'}  #'csv': 'upgrade37',
@@ -1022,7 +1083,10 @@ class GG_HJ_ZHNYKJJ(scrapy.Spider, OutputConfig):
         for record in data_mapper:
             record['PDSJ'] = self.year_mapping[current_url]
             record['HJDJ'] = self.level_mapping[current_url]
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def parse_2010(self, response):
         mapping_setting = {'序号': 'no',
@@ -1048,7 +1112,10 @@ class GG_HJ_ZHNYKJJ(scrapy.Spider, OutputConfig):
             record['PDSJ'] = self.year_mapping[response.request.url]
             record['HJDJ'] = current_level
             last_index = current_index
-            yield record
+            item = ConfigurablespidersItem()
+            item['url'] = response.request.url
+            item['data_item'] = record
+            yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade38'}  #'csv': 'upgrade38',
@@ -1084,9 +1151,15 @@ class GG_ZJ_KXYYS(scrapy.Spider, OutputConfig):
                 structuring_data = StructuringParser.handle_html_node(child)
                 if isinstance(structuring_data, list):
                     for x in structuring_data:
-                        yield {'XM': x, 'XBMC': current_class}
+                        item = ConfigurablespidersItem()
+                        item['url'] = response.request.url
+                        item['data_item'] = {'XM': x, 'XBMC': current_class}
+                        yield item
                 else:
-                    yield {'XM': structuring_data, 'XBMC': current_class}
+                    item = ConfigurablespidersItem()
+                    item['url'] = response.request.url
+                    item['data_item'] = {'XM': structuring_data, 'XBMC': current_class}
+                    yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade39'}  #'csv': 'upgrade39',

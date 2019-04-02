@@ -103,3 +103,50 @@ class RedisPipeline(object):
             json_data = json.dumps(data, ensure_ascii=False)
             self.redis_db.lpush(redis_key, json_data)
         return item
+
+
+class ValidURLPipeline(object):
+    # 用于统计爬虫爬取到数据的url，统计的item类型为ConfigurablespidersItem
+
+    def __init__(self, host, password, port):
+        self.host = host
+        self.password = password
+        self.port = port
+        self.redis_key = None
+        self.url_set = {}
+        self.result_redis_key = None
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            host=crawler.settings.get('REDIS_HOST'),
+            password=crawler.settings.get('REDIS_PASSWORD'),
+            port=crawler.settings.get('REDIS_PORT')
+        )
+
+    def open_spider(self, spider):
+        pass
+
+    def close_spider(self, spider):
+        if self.redis_key is not None:
+            redis_db = Redis(host=self.host, password=self.password, port=self.port, db=0)
+            # 先清空原有数据
+            key = 'urls_' + self.redis_key
+            redis_db.delete(key)
+            json_data = json.dumps(self.url_set, ensure_ascii=False)
+            print("统计的信息写入到"+key)
+            redis_db.set(key, json_data)
+        else:
+            print("不存在需要统计的信息")
+
+    def process_item(self, item, spider):
+        item_form_url = None
+        if isinstance(item, ConfigurablespidersItem):
+            item_form_url = item['url']
+        if self.redis_key is None and isinstance(spider, OutputConfig):
+            self.redis_key = spider.get_output_config("redis", item_form_url)
+        if self.redis_key is not None and not self.redis_key.isspace() and item_form_url is not None:
+            if item_form_url not in self.url_set.keys():
+                self.url_set[item_form_url] = 0
+            self.url_set[item_form_url] += 1
+        return item

@@ -1,6 +1,5 @@
 import re
 import tempfile
-import zipfile
 from collections import OrderedDict
 from copy import deepcopy
 

@@ -72,6 +72,7 @@ DOWNLOAD_TIMEOUT = 20
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
+    'ConfigurableSpiders.pipelines.ValidURLPipeline': 400,
     'ConfigurableSpiders.pipelines.CSVPipeline': 300,
     'ConfigurableSpiders.pipelines.RedisPipeline': 200,
 }
