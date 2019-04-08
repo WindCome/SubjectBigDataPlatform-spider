@@ -34,7 +34,7 @@ class StructuringParser:
             try:
                 file = FileHelper.convert_file_to_docx(doc_file_path)
             except Exception as e:
-                print(response.request.url+"转换为docx文件失败")
+                print(response.request.url + "转换为docx文件失败")
                 print(e)
                 return []
         elif postfix == "xls" or postfix == 'xlsx':
@@ -118,7 +118,8 @@ class StructuringParser:
     @staticmethod
     def handle_html_node(current_node):
         string = current_node.text
-        if len(list(current_node)) == 0 or (string is not None and not string.isspace()):
+        if len(list(current_node)) == 0 or (string is not None and not string.isspace()) or \
+                current_node.tag == 'td':
             # 叶子节点
             return StringHelper.filter_illegal_char(LxmlHelper.get_text_of_node(current_node))
         else:
@@ -139,7 +140,7 @@ class StructuringParser:
         row_span = LxmlHelper.get_attribute_of_element(node, "rowspan")
         if row_span is not None:
             siblings = parent
-            for i in range(0, int(row_span)-1):
+            for i in range(0, int(row_span) - 1):
                 siblings = siblings.getnext()
                 if siblings is None:
                     break
@@ -167,7 +168,6 @@ class StructuringParser:
         result = []
         for i in range(0, len(tables)):
             table = tables[i]
-            table_data = []
             for j in range(0, len(table.rows)):
                 row = table.rows[j]
                 row_data = []
@@ -177,8 +177,7 @@ class StructuringParser:
                         row_data.append(StructuringParser.__handle_docx_tables(cell_tables))
                     else:
                         row_data.append(row.cells[k].text)
-                table_data.append(row_data)
-            result.append(table_data)
+                result.append(row_data)
         return result
 
     @staticmethod

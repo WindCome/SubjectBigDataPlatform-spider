@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
+import urllib
 
 import scrapy
 from lxml import etree
@@ -44,6 +45,8 @@ class ExampleSpider(scrapy.Spider, OutputConfig):
                         for a_tag in a_tags:
                             target_url = LxmlHelper.get_attribute_of_element(a_tag, 'href')
                             target_url = response.urljoin(target_url)
+                            # url含中文字符预处理
+                            target_url = urllib.parse.quote(target_url, safe=";/?:@&=+$,", encoding="utf-8")
                             if regex_str in condition.keys() and ExampleSpider.is_node_match_regex(a_tag, condition[regex_str]) or\
                                     regex_str not in condition.keys():
                                 self.config_pool.accpet_xpath_crawl_result(current_url, condition, target_url)

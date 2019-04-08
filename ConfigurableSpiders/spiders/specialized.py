@@ -555,6 +555,7 @@ class GG_ZJ_GYDS(scrapy.Spider, OutputConfig):
         if pipeline_mark in output_setting.keys():
             return output_setting[pipeline_mark]
 
+
 class GG_ZJ_GCYYS(scrapy.Spider, OutputConfig):
     # 26-工程院院士
     name = 'GG_ZJ_GCYYS'
@@ -663,22 +664,18 @@ class GG_JX_GJJGHJCW(scrapy.Spider, OutputConfig):
 
 class GG_HJ_HXJSKJJ(scrapy.Spider, OutputConfig):
     # 30-华夏建设科学技术奖
-    # TODO 目标计算机积极拒绝
     name = 'GG_HJ_HXJSKJJ'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.root_url_after_2018 = 'http://stc.chinagb.net/index.asp'
-        self.root_url_before_2018 = 'http://search.mohurd.gov.cn/?tn=mohurd&lastq=%24wstquerystring%24&sort=last-modified+desc&rn=10&auth_info=&table_id=%24wsttableid%24&pn=0&query=%E5%8D%8E%E5%A4%8F%E5%BB%BA%E8%AE%BE%E7%A7%91%E5%AD%A6%E6%8A%80%E6%9C%AF%E5%A5%96%E8%8E%B7%E5%A5%96%E9%A1%B9%E7%9B%AE&ty=a&ukl=&uka=&ukf=&ukt=&sl=&ts=&te=&upg=0'
         self.year_mapping = {}
 
     def start_requests(self):
-        from scrapy_splash import SplashRequest
-        yield SplashRequest(url=self.root_url_after_2018, args={'wait': 1.0}, callback=self.find_data_page_after_2018)
-        yield SplashRequest(url=self.root_url_before_2018, args={'wait': 1.0}, callback=self.find_info_page)
+        yield scrapy.Request(url=self.root_url_after_2018, callback=self.find_data_page_after_2018)
 
     def find_data_page_after_2018(self, response):
-        doc = etree.HTML(response.body)
+        doc = etree.HTML(response.body.decode(response.encoding))
         a_tags = doc.xpath('//a')
         for a_tag in a_tags:
             text = LxmlHelper.get_text_of_node(a_tag)
@@ -687,27 +684,18 @@ class GG_HJ_HXJSKJJ(scrapy.Spider, OutputConfig):
             if search is not None:
                 target_url = LxmlHelper.get_attribute_of_element(a_tag, 'href')
                 target_url = response.urljoin(target_url)
-                self.year_mapping[target_url] = search.group(1)
-                yield scrapy.Request(url=target_url, callback=self.parse)
-
-    def find_info_page(self, response):
-        doc = etree.HTML(response.body)
-        a_tags = doc.xpath('//*[@class=result-list__item]//a')
-        for a_tag in a_tags:
-            text = LxmlHelper.get_text_of_node(a_tag)
-            search = re.search('(\d{4})年.*华夏建设科学技术奖获奖项目的公告', text)
-            if search is not None:
-                target_url = LxmlHelper.get_attribute_of_element(a_tag, 'href')
-                target_url = response.urljoin(target_url)
+                import urllib
+                target_url = urllib.parse.quote(target_url, safe=";/?:@&=+$,", encoding="utf-8")
                 self.year_mapping[target_url] = search.group(1)
                 yield scrapy.Request(url=target_url, callback=self.parse)
 
     def parse(self, response):
         mapping = {'项目名称': 'XMMC',
                    '完成人': 'WCR',
-                   '获奖等级': 'HJDJ',
+                   '拟推荐等级': 'HJDJ',
                    '完成单位': 'XXMC'}
         structuring_data = StructuringParser.parse(response)
+        print(structuring_data)
         data_mapper = DataMapper()
         data_mapper.init_setting_by_dir(mapping)
         data_mapper.set_structuring_data(structuring_data)
@@ -721,6 +709,69 @@ class GG_HJ_HXJSKJJ(scrapy.Spider, OutputConfig):
 
     def get_output_config(self, pipeline_mark, item_from_url):
         output_setting = {'redis': 'upgrade30'}  #'csv': 'upgrade30',
+        if pipeline_mark in output_setting.keys():
+            return output_setting[pipeline_mark]
+
+    def redirect(self, from_url, to_url):
+        if from_url in self.year_mapping.keys():
+            self.year_mapping[to_url] = self.year_mapping[from_url]
+
+
+class GG_HJ_GJZRKXJ(scrapy.Spider, OutputConfig):
+    # 31-国家自然科学奖
+    name = 'GG_HJ_GJZRKXJ'
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.root_url = "http://znjs.most.gov.cn/wasdemo/search"
+        self.year_mapping = {}
+
+    def start_requests(self):
+        form_data = {'searchword': '国家自然科学奖获奖项目目录',
+                     'prepage': '10',
+                     'channelid': '44374', 'sortfield': '-DOCRELTIME'}
+        yield scrapy.FormRequest(url=self.root_url, formdata=form_data,callback=self.find_info_page)
+
+    def find_info_page(self, response):
+        doc = etree.HTML(response.body)
+        a_tags = doc.xpath('//a')
+        filter_year = set()
+        for a_tag in a_tags:
+            text = LxmlHelper.get_text_of_node(a_tag)
+            search = re.search('(\d*)年.*国家自然科学奖获奖', text)
+            if search is not None and search.group(1) not in filter_year:
+                filter_year.add(search.group(1))
+                target_url = LxmlHelper.get_attribute_of_element(a_tag, 'href')
+                target_url = response.urljoin(target_url)
+                self.year_mapping[target_url] = search.group(1)
+                yield scrapy.Request(url=target_url, callback=self.parse)
+
+    def parse(self, response):
+        mapping_setting = {'编号': 'ZSBH',
+                           '项目名称': 'XMMC',
+                           '主要完成人': 'WCR',
+                           '提名单位': 'TJDW',
+                           '推荐单位' : 'TJDW'}
+        data_mapper = DataMapper()
+        data_mapper.init_setting_by_dir(mapping_setting)
+        current_url = response.request.url
+        structuring_data = StructuringParser.parse(response)
+        print(structuring_data)
+        data_mapper.set_structuring_data(structuring_data)
+        for record in data_mapper:
+            if current_url in self.year_mapping.keys():
+                record['PDSJ'] = self.year_mapping[response.request.url]
+            description = data_mapper.get_description_of_current_table()
+            search = re.search('.等奖', description)
+            if search is not None:
+                record['HJDJ'] = search.group()
+                item = ConfigurablespidersItem()
+                item['url'] = response.request.url
+                item['data_item'] = record
+                yield item
+
+    def get_output_config(self, pipeline_mark, item_from_url):
+        output_setting = {'csv': 'upgrade31'}  #,'redis': 'upgrade31'
         if pipeline_mark in output_setting.keys():
             return output_setting[pipeline_mark]
 
@@ -823,7 +874,7 @@ class GG_TD_JYBTD(scrapy.Spider, OutputConfig):
 
 
 class GG_HJ_GJJSFMJ(scrapy.Spider, OutputConfig):
-    # 36-国家科技进步奖
+    # 35-国家技术发明奖
     name = 'GG_HJ_GJJSFMJ'
 
     def __init__(self, **kwargs):
@@ -836,9 +887,6 @@ class GG_HJ_GJJSFMJ(scrapy.Spider, OutputConfig):
                      'prepage': '10',
                      'channelid': '44374', 'sortfield': '-DOCRELTIME'}
         yield scrapy.FormRequest(url=self.root_url, formdata=form_data,callback=self.find_info_page)
-        # url = 'http://www.most.gov.cn/ztzl/gjkxjsjldh/jldh2018/jldh18jlgg/201812/t20181226_144347.htm'
-        # self.year_mapping[url] = 2018
-        # yield scrapy.Request(url=url, callback=self.parse)
 
     def find_info_page(self, response):
         doc = etree.HTML(response.body)
@@ -878,7 +926,7 @@ class GG_HJ_GJJSFMJ(scrapy.Spider, OutputConfig):
                 yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
-        output_setting = {'csv': 'upgrade35'}  #,'redis': 'upgrade35'
+        output_setting = {'redis': 'upgrade35'}  #'csv': 'upgrade35',
         if pipeline_mark in output_setting.keys():
             return output_setting[pipeline_mark]
 
@@ -893,13 +941,10 @@ class GG_HJ_GJKJJBJ(scrapy.Spider, OutputConfig):
         self.year_mapping = {}
 
     def start_requests(self):
-        # form_data = {'searchword': '国家科学技术进步奖获奖项目目录',
-        #              'prepage': '10',
-        #              'channelid': '44374', 'sortfield': '-DOCRELTIME'}
-        # yield scrapy.FormRequest(url=self.root_url, formdata=form_data,callback=self.find_info_page)
-        url = 'http://www.most.gov.cn/ztzl/gjkxjsjldh/jldh2014/jldh14jlgg/201501/t20150107_117320.htm'
-        self.year_mapping[url] = 2014
-        yield scrapy.Request(url=url, callback=self.parse)
+        form_data = {'searchword': '国家科学技术进步奖获奖项目目录',
+                     'prepage': '10',
+                     'channelid': '44374', 'sortfield': '-DOCRELTIME'}
+        yield scrapy.FormRequest(url=self.root_url, formdata=form_data,callback=self.find_info_page)
 
     def find_info_page(self, response):
         doc = etree.HTML(response.body)
@@ -924,16 +969,7 @@ class GG_HJ_GJKJJBJ(scrapy.Spider, OutputConfig):
         data_mapper = DataMapper()
         data_mapper.init_setting_by_dir(mapping_setting)
         current_url = response.request.url
-        # print("========")
-        # print(response.body.decode(response.encoding))
-        # print("========")
-        if int(self.year_mapping[current_url]) <= 2014:
-            html_file = FileHelper.create_temp_file_by_bytes(response.body, 'html')
-            docx = FileHelper.convert_file_to_docx(html_file)
-            structuring_data = StructuringParser.dispatch_file_handler(docx)
-        else:
-            structuring_data = StructuringParser.parse(response)
-        print(structuring_data)
+        structuring_data = StructuringParser.parse(response)
         data_mapper.set_structuring_data(structuring_data)
         for record in data_mapper:
             if current_url in self.year_mapping.keys():
@@ -948,7 +984,7 @@ class GG_HJ_GJKJJBJ(scrapy.Spider, OutputConfig):
                 yield item
 
     def get_output_config(self, pipeline_mark, item_from_url):
-        output_setting = {'csv': 'upgrade36'}  #,'redis': 'upgrade36'
+        output_setting = {'redis': 'upgrade36'}  #'csv': 'upgrade36',
         if pipeline_mark in output_setting.keys():
             return output_setting[pipeline_mark]
 
